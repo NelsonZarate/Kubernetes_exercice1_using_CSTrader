@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: api
+  name: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - image: cstrader:latest
+        name: cstrader
+        ports:
+        - containerPort: 80
+      env:
+    - name: DATABASE_USERNAME      # O nome que a tua API pede
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials     # Nome do cofre
+          key: username            # A chave dentro do cofre (user)
+    
+    - name: DATABASE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials
+          key: password            # A chave dentro do cofre (password)
+    
+    - name: DATABASE_NAME
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials
+          key: dbname              # A chave dentro do cofre (db)
+
+    # 2. Dados de Configuração (Podem ser texto simples)
+    - name: DATABASE_HOST
+      value: "database"            # IMPORTANTE: Este é o nome do Service do Postgres
+    
+    - name: DATABASE_PORT
+      value: "5432"
+    
+    - name: DATABASE_DRIVER
+      value: "postgresql"
+        resources: {}
+status: {}

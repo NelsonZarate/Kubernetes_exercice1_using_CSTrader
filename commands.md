@@ -1,0 +1,1 @@
+create database deployment: kubectl create deployment database --image postgres:17 --replicas 1 --dry-run=client -o yaml >> database_deployment.yaml

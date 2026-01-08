@@ -1,15 +1,13 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  labels:
-    app: database
   name: database
 spec:
+  serviceName: "database"
   replicas: 1
   selector:
     matchLabels:
       app: database
-  strategy: {}
   template:
     metadata:
       labels:
@@ -20,14 +18,15 @@ spec:
         image: postgres:17
         ports:
         - containerPort: 5432
+          name: postgres
         env:
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
               name: db-credentials
-              key: username       
-        - name: POSTGRESS_PASSWORD
-          valueFrom: 
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
             secretKeyRef:
               name: db-credentials
               key: password
@@ -37,11 +36,14 @@ spec:
               name: db-credentials
               key: dbname
         volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: postgres-storage
-        resources: {}
-      volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc-data
-status: {}
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+  
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

@@ -36,7 +36,7 @@ RUN poetry install --no-root --only main
 
 # Para o seu MVP (simplificado):
 # 3. Copia o código da aplicação (assumindo que o código está em 'backend/')
-COPY backend/ /app/
+COPY backend/ /app/backend/
 
 # Define a porta de exposição (para documentação)
 EXPOSE 8000

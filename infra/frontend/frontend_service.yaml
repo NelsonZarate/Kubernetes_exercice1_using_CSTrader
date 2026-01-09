@@ -12,6 +12,6 @@ spec:
     targetPort: 3000
   selector:
     app: frontend
-  type: LoadBalancer
+  type: ClusterIP
 status:
   loadBalancer: {}

@@ -50,9 +50,6 @@ frontend:
 	kubectl apply -f infra/frontend/frontend_deployment.yaml
 	kubectl apply -f infra/frontend/frontend_service.yaml
 
-#frontend: 
-#	./scripts/frontend_apply.shg
-
 #ingress
 ingress: 
 	kubectl create ingress cstrader-ingress \

@@ -9,9 +9,9 @@ spec:
   - name: 8000-8000
     port: 8000
     protocol: TCP
-    targetPort: 8000
+    targetPort: 8080
   selector:
     app: api
-  type: LoadBalancer
+  type: ClusterIP
 status:
   loadBalancer: {}

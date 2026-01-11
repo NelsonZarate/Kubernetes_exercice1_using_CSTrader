@@ -107,7 +107,10 @@ def login_user(email: str = Body(..., embed=True), password: str = Body(..., emb
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro durante o login: {str(e)}") from e
+        import logging
+        logging.exception("ERRO NO LOGIN")
+        raise
+
     
 
 @app.get("/users/me")

@@ -49,3 +49,13 @@ spec:
           value: "5432"
         - name: DATABASE_DRIVER
           value: "postgresql"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: SECRET_KEY
+        - name: ALGORITHM
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: ALGORITHM

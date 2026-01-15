@@ -1,6 +1,6 @@
 # --- Variáveis ---
 CLUSTER_NAME = terraform-cstrader
-TF_VARS = -var-file cstrader.tfvars
+TF_VARS = -var-file env.tfvars
 
 # Ficheiros de output dos planos
 PLAN_CLUSTER = cluster.plan
@@ -24,8 +24,7 @@ apply-cluster: plan-cluster
 	@echo "🚀 Creating Minikube Cluster..."
 	terraform apply $(PLAN_CLUSTER)
 
-# --- FASE 2: AS IMAGENS ---
-
+# --- IMAGENS ---
 # Constrói e carrega as imagens (requer que o apply-cluster já tenha sido feito)
 images:
 	@echo "🛠️  Building images locally..."
@@ -48,11 +47,49 @@ apply-app: plan-app
 	@echo "🚀 Deploying App to Kubernetes..."
 	terraform apply $(PLAN_APP)
 
-# --- COMANDO MESTRE (JARVIS) ---
-start_terraform: init apply-cluster images apply-app
-	@echo "✅ CSTrader deployed successfully via Terraform!"
+# Ingress
+# 1. Ativa o addon de Ingress no cluster (só precisa de ser feito uma vez)
+ingress-enable:
+	@echo "🔌 Enabling Ingress addon..."
+	minikube addons enable ingress -p $(CLUSTER_NAME)
+	@echo "⏳ Waiting for Ingress controller to be ready..."
+	kubectl wait --namespace ingress-nginx \
+		--for=condition=ready pod \
+		--selector=app.kubernetes.io/component=controller \
+		--timeout=120s
+
+
+ingress-ip:
+	@echo "🔧 Updating /etc/hosts..."
+	@IP=$$(minikube ip -p $(CLUSTER_NAME)); \
+	\
+	# 1. Verifica se já existe (grep). Se NÃO existir (!), adiciona.
+	if ! grep -q "cstrader.local" /etc/hosts; then \
+		echo "Writing $$IP cstrader.local to /etc/hosts..."; \
+		sudo sh -c "echo '$$IP cstrader.local' >> /etc/hosts"; \
+		echo "✅ Added!"; \
+	else \
+		echo "⚠️ Entry already exists. Skipping to avoid duplicates."; \
+	fi
+# 3. Corre o Túnel (Este comando BLOQUEIA o terminal, é normal)
+tunnel:
+	@echo "🚇 Starting Minikube Tunnel (Sudo required)..."
+	@echo "⚠️  KEEP THIS TERMINAL OPEN "
+	minikube tunnel -p $(CLUSTER_NAME)
+
+
+start_terraform: init apply-cluster ingress-enable images apply-app ingress-ip tunnel
+	@echo "✅ CSTrader deployed! Run 'make ingress-ip' to see access info."
+
 
 # Limpeza
 clean:
-	terraform destroy -auto-approve $(TF_VARS)
-	rm -f $(PLAN_CLUSTER) $(PLAN_APP)
+	minikube delete --all
+
+	rm -rf .terraform
+	rm -f *.tfstate
+	rm -f *.tfstate.backup
+	rm -f *.plan
+	rm -f .terraform.lock.hcl
+
+	terraform init

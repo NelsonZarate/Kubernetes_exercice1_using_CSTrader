@@ -1,19 +1,3 @@
-# --- Minikube Cluster ---
-resource "minikube_cluster" "docker" {
-  driver       = "docker"
-  cluster_name = "terraform-provider-minikube-acc-docker"
-  addons = [
-    "default-storageclass",
-    "storage-provisioner"
-  ]
-}
-
-# --- Namespace ---
-resource "kubernetes_namespace_v1" "app" {
-  metadata {
-    name = "app"
-  }
-}
 
 # --- Database Secret ---
 resource "kubernetes_secret_v1" "cstrader-env" {

@@ -8,55 +8,18 @@ PLAN_APP = app.plan
 
 .PHONY: init plan-cluster apply-cluster images plan-app apply-app start clean
 
-# 1. Inicializar
 init:
 	terraform init
 
-# --- FASE 1: O CLUSTER ---
-
-# Cria o plano APENAS para o Minikube (ignora o resto por enquanto)
-plan-cluster:
-	@echo "🔍 Planning Minikube Cluster..."
-	terraform plan -target=minikube_cluster.docker -out=$(PLAN_CLUSTER) $(TF_VARS)
-
-# Aplica o plano do cluster
-apply-cluster: plan-cluster
-	@echo "🚀 Creating Minikube Cluster..."
-	terraform apply $(PLAN_CLUSTER)
-
-# --- IMAGENS ---
-# Constrói e carrega as imagens (requer que o apply-cluster já tenha sido feito)
-images:
-	@echo "🛠️  Building images locally..."
-	docker build -f ../backend/ops/Dockerfile -t cstrader:latest ..
-	docker build -f ../frontend/Dockerfile -t cstrader-frontend:latest ../frontend/
-	
-	@echo "📦 Loading images into Minikube cluster: $(CLUSTER_NAME)..."
-	minikube -p $(CLUSTER_NAME) image load cstrader:latest
-	minikube -p $(CLUSTER_NAME) image load cstrader-frontend:latest
-
-# --- FASE 3: A APLICAÇÃO (K8S) ---
-
-# Agora que o cluster existe e tem imagens, planeamos o resto (Deployments, Services, etc)
-plan-app:
+plan:
 	@echo "🔍 Planning Kubernetes App resources..."
 	terraform plan -out=$(PLAN_APP) $(TF_VARS)
 
 # Aplica o plano da aplicação
-apply-app: plan-app
+apply: plan
 	@echo "🚀 Deploying App to Kubernetes..."
 	terraform apply $(PLAN_APP)
 
-# Ingress
-# 1. Ativa o addon de Ingress no cluster (só precisa de ser feito uma vez)
-ingress-enable:
-	@echo "🔌 Enabling Ingress addon..."
-	minikube addons enable ingress -p $(CLUSTER_NAME)
-	@echo "⏳ Waiting for Ingress controller to be ready..."
-	kubectl wait --namespace ingress-nginx \
-		--for=condition=ready pod \
-		--selector=app.kubernetes.io/component=controller \
-		--timeout=120s
 
 
 ingress-ip:
@@ -71,20 +34,19 @@ ingress-ip:
 	else \
 		echo "⚠️ Entry already exists. Skipping to avoid duplicates."; \
 	fi
-# 3. Corre o Túnel (Este comando BLOQUEIA o terminal, é normal)
+
 tunnel:
 	@echo "🚇 Starting Minikube Tunnel (Sudo required)..."
 	@echo "⚠️  KEEP THIS TERMINAL OPEN "
 	minikube tunnel -p $(CLUSTER_NAME)
 
 
-start_terraform: init apply-cluster ingress-enable images apply-app ingress-ip tunnel
+start_terraform: init apply ingress-ip tunnel
 	@echo "✅ CSTrader deployed! Run 'make ingress-ip' to see access info."
 
 
-# Limpeza
 clean:
-	minikube delete --all
+	minikube delete -p terraform-cstrader
 
 	rm -rf .terraform
 	rm -f *.tfstate

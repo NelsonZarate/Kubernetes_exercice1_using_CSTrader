@@ -1,3 +1,12 @@
+resource "null_resource" "fix_ingress_webhook" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  provisioner "local-exec" {
+    command = "kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission || true && sleep 10"
+  }
+}
 resource "kubernetes_ingress_v1" "cstrader_ingress" {
   metadata {
     name      = "cstrader-ingress"
@@ -9,10 +18,9 @@ resource "kubernetes_ingress_v1" "cstrader_ingress" {
 
   spec {
     rule {
-      host = "cstrader.local" # O domínio que vamos inventar
+      host = "cstrader.local"
       http {
         
-        # Rota para o Frontend (Raiz)
         path {
           path = "/"
           path_type = "Prefix"
@@ -42,4 +50,9 @@ resource "kubernetes_ingress_v1" "cstrader_ingress" {
       }
     }
   }
+  depends_on = [
+    kubernetes_service_v1.api,
+    kubernetes_service_v1.frontend,
+    null_resource.fix_ingress_webhook
+  ]
 }

@@ -6,7 +6,7 @@ resource "kubernetes_config_map_v1" "nginx_conf" {
   }
 
   data = {
-    "default.conf" = <<EOF
+    "app.conf" = <<EOF
 server {
     listen       3000;
     listen  [::]:3000;
@@ -25,7 +25,7 @@ server {
 
     location /api/ {
         # CORREÇÃO: Usa o namespace dinâmico (app) em vez de 'default'
-        proxy_pass http://api.${kubernetes_namespace_v1.app.metadata[0].name}.svc.cluster.local:8000;
+        proxy_pass http://api.${kubernetes_namespace_v1.app.metadata[0].name}:8000;
         
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -85,13 +85,12 @@ resource "kubernetes_deployment_v1" "frontend" {
 
           volume_mount {
             name       = "nginx-config-volume"
-            mount_path = "/etc/nginx/conf.d"
+            mount_path = "/etc/nginx/conf.d/"
           }
         }
 
         volume {
           name = "nginx-config-volume"
-          
           config_map {
             name = kubernetes_config_map_v1.nginx_conf.metadata[0].name
           }
@@ -100,5 +99,10 @@ resource "kubernetes_deployment_v1" "frontend" {
     }
   }
 
-  depends_on = [kubernetes_config_map_v1.nginx_conf]
+  depends_on = [
+    kubernetes_config_map_v1.nginx_conf,
+    kubernetes_service_v1.api,
+    kubernetes_service_v1.database,
+    null_resource.docker_build_load
+    ]
 }
